@@ -11,8 +11,9 @@
 MODULE_AUTHOR("Chzh") ;
 MODULE_LICENSE("GPL") ;
 MODULE_DESCRIPTION("This is a very important kernel module");
-// sudo mknod /dev/chrdrv c 700 0 && sudo chmod a+rw /dev/chrdrv
-// ls -la /dev/chrdev
+// sudo mknod /dev/chrdrv c 700 0
+// sudo chmod a+rw /dev/chrdrv
+// ls -la /dev/chrdrv
 // sudo chmod a+rw /dev/chrdrv
 // sudo echo "hi" > /dev/chrdrv
 
@@ -50,6 +51,7 @@ static int mydev_release(struct inode *pinode, struct file *pfile){
 
 static ssize_t mydev_read(struct file *pfile, char __user *buf, size_t lbuf, loff_t *ppos){
     char *kbuf = pfile -> private_data;
+    // head -8 /dev/chrdrv
     static char test_msg[128] = "Hello world\0";
     memcpy(kbuf, test_msg, 12);
     int nbytes = lbuf - copy_to_user(buf, kbuf + *ppos, lbuf);
