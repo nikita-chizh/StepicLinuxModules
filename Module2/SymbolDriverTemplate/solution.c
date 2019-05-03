@@ -38,13 +38,15 @@ static int mydev_release(struct inode *pinode, struct file *pfile){
 }
 
 static ssize_t mydev_read(struct file *pfile, char __user *buf, size_t lbuf, loff_t *ppos){
-printk( KERN_INFO "mydev_read\n", DEVICE_NAME);
-return 0;
+int nbytes = lbuf - copy_to_user(buf, kbuf + *ppos, lbuf);
+printk( KERN_INFO "READ DEVICE %s nbytes=%d ppos=%d\n", DEVICE_NAME, nbytes, (int)*ppos);
+return nbytes;
 }
 
 static ssize_t mydev_write(struct file *pfile, const char __user *buf, size_t lbuf, loff_t *ppos){
-printk( KERN_INFO "mydev_write\n", DEVICE_NAME);
-return 0;
+int nbytes = lbuf - copy_from_user(kbuf + *ppos, buf, lbuf);
+printk( KERN_INFO "WRITE DEVICE %s nbytes=%d ppos=%d\n", DEVICE_NAME, nbytes, (int)*ppos);
+return nbytes;
 }
 
 struct file_operations fops = {
