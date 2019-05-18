@@ -14,11 +14,19 @@
 static int foo;
 static int baz;
 static int bar;
+//
 static int foo_show_counter=0;
 static int foo_store_counter=0;
+//
+static int baz_show_counter=0;
+static int baz_store_counter=0;
+//
+static int bar_show_counter=0;
+static int bar_store_counter=0;
+
 
 /*
- * foo_show дергается каждый раз когда я открываю в nano foo
+ * foo_show дергается каждый раз при чтении (cat, nano) foo
  * При этом если делать это гуем дергается при открытии папки в гуи
  * и несколько раз при даблклике на файл
  */
@@ -61,14 +69,17 @@ static struct kobj_attribute foo_attribute =
         __ATTR(foo, 0664, foo_show, foo_store);
 
 /*
- * More complex function where we determine which variable is being accessed by
- * looking at the attribute for the "baz" and "bar" files.
+ * В зависимости от того какой файл открываем
+ * в attr->attr.name запишется baz или bar
+ *
  */
 static ssize_t b_show(struct kobject *kobj, struct kobj_attribute *attr,
                       char *buf)
 {
-    int var;
+    printk( KERN_INFO "b_show baz_show_counter=%d\n", baz_show_counter);
+    printk( KERN_INFO "b_show attr->attr.name=%s\n", attr->attr.name);
 
+    int var;
     if (strcmp(attr->attr.name, "baz") == 0)
         var = baz;
     else
