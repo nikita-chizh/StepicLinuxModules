@@ -20,6 +20,7 @@ MODULE_DESCRIPTION("This is a very important kernel module");
 static dev_t first;
 static unsigned int open_count = 0;
 static size_t bytes_written = 0;
+static char was_readed = 0;
 
 static unsigned int count = 1;
 static int my_major = 240, my_minor = 0;
@@ -34,6 +35,7 @@ static char help_buf[128];
 // open и release происходять перед КАЖДЫМ чтением-записью
 static int mydev_open(struct inode *pinode, struct file *pfile){
     open_count++;
+    was_readed = 0;
     // printk( KERN_INFO "mydev_open open_count==%d", open_count);
     return 0;
 }
@@ -43,11 +45,13 @@ static int mydev_release(struct inode *pinode, struct file *pfile){
 }
 
 static ssize_t mydev_read(struct file *pfile, char __user *buf, size_t read_size, loff_t *ppos){
-    // printk( KERN_INFO "read_size=%d ppos==%d", read_size, (int)*ppos);
     int nbytes = sprintf(help_buf, "%d %d\n", open_count, bytes_written);
-    // printk( KERN_INFO "help_buf=%s", help_buf);
     int copied = nbytes - copy_to_user(buf, help_buf, nbytes);
-    return copied;
+    if (!was_readed){
+        was_readed = 1;
+        return copied;
+    }
+    return 0;
 }
 
 static ssize_t mydev_write(struct file *pfile, const char __user *buf, size_t write_size, loff_t *ppos){
