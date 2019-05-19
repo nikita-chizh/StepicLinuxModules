@@ -29,6 +29,7 @@ static int bar_store_counter=0;
  * foo_show дергается каждый раз при чтении (cat, nano) foo
  * При этом если делать это гуем дергается при открытии папки в гуи
  * и несколько раз при даблклике на файл
+ * buf -> то что вернется в userspace, размер не должен превышать PAGE_SIZE
  */
 // printk( KERN_INFO "READ DEVICE %s nbytes=%d ppos=%d\n", DEVICE_NAME, nbytes, (int)*ppos);
 static ssize_t foo_show(struct kobject *kobj, struct kobj_attribute *attr,
