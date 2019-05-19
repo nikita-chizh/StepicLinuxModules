@@ -19,6 +19,7 @@ MODULE_DESCRIPTION("This is a very important kernel module");
 
 static dev_t first;
 static unsigned int count = 1;
+// my_major это тип устройства (usb например) my_minor конкретное уст-во(например порт)
 static int my_major = 700, my_minor = 0;
 // struct cdev
 static struct cdev *my_cdev;
@@ -48,13 +49,14 @@ static int mydev_release(struct inode *pinode, struct file *pfile){
     pfile -> private_data = NULL;
     return 0;
 }
-
-static ssize_t mydev_read(struct file *pfile, char __user *buf, size_t lbuf, loff_t *ppos){
+//
+static ssize_t mydev_read(struct file *pfile, char __user *buf, size_t read_size, loff_t *ppos){
     char *kbuf = pfile -> private_data;
     // head -8 /dev/chrdrv
-    static char test_msg[128] = "Hello world\0";
+    static char test_msg[128] = "Hello world";
     memcpy(kbuf, test_msg, 12);
-    int nbytes = lbuf - copy_to_user(buf, kbuf + *ppos, lbuf);
+    int nbytes = read_size - copy_to_user(buf, kbuf + *ppos, read_size);
+    // ppos это позиция в  kbuf, ее надо двигать самостоятельно
     printk( KERN_INFO "READ DEVICE %s nbytes=%d ppos=%d\n", DEVICE_NAME, nbytes, (int)*ppos);
     return nbytes;
 }
