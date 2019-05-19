@@ -1,11 +1,17 @@
 #include <linux/init.h>
-#include <linux/fs.h>
 #include <linux/cdev.h>
 #include <linux/uaccess.h>
-#include <linux/kernel.h>
-#include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/random.h>
+#include <linux/kernel.h>
+#include <linux/fs.h>
+#include <linux/uaccess.h>
+
+#include <asm-generic/page.h>
+#include <asm-generic/uaccess.h>
+#include <linux/module.h>
+
+
 // Шаблон драйвера символьного устройства
 
 MODULE_AUTHOR("Chzh") ;
@@ -25,7 +31,7 @@ static int my_major = 700, my_minor = 0;
 static struct cdev *my_cdev;
 
 #define DEVICE_NAME "CHZH_EXAMPLE"
-#define KBUF_SIZE 10*PAGE_SIZE
+#define KBUF_SIZE 10 * PAGE_SIZE
 
 
 static int mydev_open(struct inode *pinode, struct file *pfile){
@@ -68,12 +74,37 @@ static ssize_t mydev_write(struct file *pfile, const char __user *buf, size_t lb
     return nbytes;
 }
 
+static loff_t mydev_llseek(struct file *pfile, loff_t offset, int origin){
+    loff_t testpos;
+    switch (origin){
+        case SEEK_SET:
+            testpos = offset;
+            break;
+        case SEEK_CUR:
+            testpos = pfile->f_pos + offset;
+            break;
+        case SEEK_END:
+            testpos = KBUF_SIZE + offset;
+            break;
+        default:
+            return -EINVAL;
+    }
+    if (testpos > KBUF_SIZE)
+        testpos = KBUF_SIZE;
+    else if (testpos < KBUF_SIZE)
+        testpos = 0;
+    pfile->f_pos = testpos;
+    printk( KERN_INFO "WRITE DEVICE %s nbytes=%d ppos=%d\n", DEVICE_NAME, nbytes, (int)*ppos);
+    return testpos;
+}
+
 struct file_operations fops = {
         .owner = THIS_MODULE,
         .open = mydev_open,
         .read = mydev_read,
         .write = mydev_write,
-        .release = mydev_release
+        .release = mydev_release,
+        .llseek = mydev_llseek
 };
 
 static int __init hello_init(void) {
