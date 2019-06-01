@@ -39,14 +39,21 @@ static struct class *my_class;
 #define KBUF_SIZE 10 * PAGE_SIZE
 
 
-static int mydev_open(struct inode *pinode, struct file *pfile){
-    printk( KERN_INFO "OPEN\n");
-    printk( KERN_INFO "myopen %s KBUF_SIZE=%d\n", DEVICE_NAME, KBUF_SIZE);
-    static int counter = 0;
-    char *kbuf = kmalloc(KBUF_SIZE, GFP_KERNEL);
-    pfile -> private_data = kbuf;
-    printk( KERN_INFO "COUNTER=%d\n", counter);
-    printk( KERN_INFO "REFERENCE COUNTER=%d\n", module_refcount(THIS_MODULE));
+static int mydev_open(struct inode *inode, struct file *filp){
+    struct my_dev_data  *dev_data;
+
+    dev_data = container_of(inode->i_cdev, struct my_dev_data, cdev);
+
+    /* Allocate memory for file data and channel data */
+    file_data = devm_kzalloc(&dev_data->pdev->dev,
+                             sizeof(struct file_data), GFP_KERNEL);
+
+    /* Add open file data to list */
+    INIT_LIST_HEAD(&file_data->file_open_list);
+    list_add(&file_data->file_open_list, &dev_data->file_open_list);
+
+    file_data->dev_data = dev_data;
+    filp->private_data = file_data;
 
     return 0;
 }
