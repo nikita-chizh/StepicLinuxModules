@@ -18,7 +18,7 @@
 MODULE_AUTHOR("Chzh") ;
 MODULE_LICENSE("GPL") ;
 MODULE_DESCRIPTION("This is a very important kernel module");
-// sudo mknod /dev/solution_node c 700 0
+// sudo mknod /dev/solution_node c 240 0
 // sudo chmod a+rw /dev/solution_node
 // ls -la /dev/solution_node
 // sudo chmod a+rw /dev/solution_node
@@ -27,23 +27,24 @@ MODULE_DESCRIPTION("This is a very important kernel module");
 //
 // Created by nikita on 02.02.17.
 //
-#define BUF_SIZE 256
+#define BUF_SIZE 257
 struct Ring_Buffer{
     char data[BUF_SIZE];// данные
-    char *cur_pos;//позиция
+    char *cur_pos;//конечная позиция
     char *end;
 }Ring_Buffer;
 
+static int session_counter = 0;
 
 struct Ring_Buffer *create_ring_buffer(void);
 
-int size_counting(struct Ring_Buffer *buffer, size_t *expected_size, size_t *available_size);
+int size_counting(struct Ring_Buffer *buffer, const size_t *expected_size, size_t *available_size);
 // сколько записал столько и верну
 size_t write_data(struct Ring_Buffer *buffer, __user char* data, size_t size) ;
 //
 size_t read_data(struct Ring_Buffer *buffer, __user char* data, size_t size) ;
 
-loff_t pos_move(struct Ring_Buffer *buffer, loff_t offset, int whence);
+void pos_move(struct Ring_Buffer *buffer, loff_t offset, int whence);
 //
 int delete_buffer(struct Ring_Buffer *buffer);
 
@@ -63,13 +64,16 @@ static struct class *my_class;
 
 
 static int mydev_open(struct inode *inode, struct file *filp){
-    struct Ring_Buffer *buffer = create_ring_buffer();
+    struct Ring_Buffer *buffer = NULL;
+    printk( KERN_INFO "mydev_open %s\n", DEVICE_NAME);
+    buffer = create_ring_buffer();
+    ++session_counter;
     filp -> private_data = (void*)buffer;
     return 0;
 }
 
 static int mydev_release(struct inode *pinode, struct file *pfile){
-    printk( KERN_INFO "mydev_release\n", DEVICE_NAME);
+    printk( KERN_INFO "mydev_release %s\n", DEVICE_NAME);
     struct Ring_Buffer *buffer = (struct Ring_Buffer*)pfile -> private_data;
     if(buffer)
         delete_buffer(buffer);
@@ -82,7 +86,7 @@ static ssize_t mydev_read(struct file *pfile, char __user *buf, size_t read_size
     if(!buffer)
         return 0;
     size_t nbytes = read_data(buffer, buf, read_size);
-    fpos += nbytes;
+    // fpos += nbytes;
     return nbytes;
 }
 
@@ -161,18 +165,21 @@ module_init(hello_init) ;
 module_exit(hello_exit) ;
 
 struct Ring_Buffer *create_ring_buffer(void) {
-    struct Ring_Buffer *buffer_ptr
-            = (struct Ring_Buffer*)kmalloc(sizeof(struct Ring_Buffer), GFP_ATOMIC);
+    struct Ring_Buffer *buffer_ptr = (struct Ring_Buffer*)kmalloc(
+            sizeof(struct Ring_Buffer), GFP_ATOMIC);
     if (buffer_ptr == NULL) {
         return NULL;
     }
-    buffer_ptr -> cur_pos = 0;
     buffer_ptr -> cur_pos = buffer_ptr->data;
-    buffer_ptr -> end = buffer_ptr -> data + BUF_SIZE;
+    int written = sprintf(buffer_ptr -> cur_pos, "%d", session_counter);
+    buffer_ptr -> cur_pos += written;
+    *(buffer_ptr -> cur_pos) = '\0';
+    buffer_ptr -> end = buffer_ptr -> data + BUF_SIZE - 1;
+    *(buffer_ptr -> end) = '\0';
     return buffer_ptr;
 }
 
-int size_counting(struct Ring_Buffer *buffer, size_t *expected_size, size_t *available_size)
+int size_counting(struct Ring_Buffer *buffer, const size_t *expected_size, size_t *available_size)
 {
     size_t max_available_size = buffer->end - buffer->cur_pos;
     if (max_available_size < 0)
@@ -184,7 +191,7 @@ int size_counting(struct Ring_Buffer *buffer, size_t *expected_size, size_t *ava
     return 0;
 }
 // сколько записал столько и верну
-size_t write_data(struct Ring_Buffer *buffer, __user char* data, size_t size) {
+size_t write_data(struct Ring_Buffer *buffer, __user char* userbuf, size_t size) {
     if (buffer == NULL) {
         return 0;
     }
@@ -192,8 +199,10 @@ size_t write_data(struct Ring_Buffer *buffer, __user char* data, size_t size) {
     int check_border = size_counting(buffer, &size, &size_to_write);
     if(check_border != 0)
         return 0;
-    int nbytes = size - copy_from_user(buffer->cur_pos, data, size_to_write);
+    int nbytes = size_to_write - copy_from_user(buffer->cur_pos, userbuf, size_to_write);
     buffer->cur_pos += nbytes;
+    *(buffer->cur_pos) = '\0';
+    printk( KERN_ALERT "write_data BUFFER=%s\n", buffer->data);
     return nbytes;
 }
 //
@@ -205,12 +214,14 @@ size_t read_data(struct Ring_Buffer *buffer, __user char* data, size_t size) {
     int check_border = size_counting(buffer, &size, &size_to_read);
     if(check_border != 0)
         return 0;
-    int nbytes = size - copy_to_user(data, buffer->cur_pos, size_to_read);
-    buffer->cur_pos += nbytes;
+    printk( KERN_ALERT "read_data BUFFER=%s\n", buffer->data);
+    copy_to_user(data, buffer->data, size_to_read);
+    size_t nbytes = buffer->cur_pos - buffer->data;
+    printk( KERN_ALERT "read_data nbytes=%d\n", nbytes);
     return nbytes;
 }
 
-loff_t pos_move(struct Ring_Buffer *buffer, loff_t offset, int whence)
+void pos_move(struct Ring_Buffer *buffer, loff_t offset, int whence)
 {
     switch (whence) {
         case SEEK_SET:
@@ -225,11 +236,11 @@ loff_t pos_move(struct Ring_Buffer *buffer, loff_t offset, int whence)
         default:
             return -EINVAL;
     }
-    if(buffer->cur_pos > buffer->end)
+    if(buffer->cur_pos >= buffer->end)
         buffer->cur_pos = buffer->end - 1;
     if(buffer->cur_pos < buffer->data)
         buffer->cur_pos = buffer->data;
-    return buffer->cur_pos;
+    *(buffer->cur_pos + 1) = '\0';
 }
 
 //
