@@ -31,21 +31,18 @@ MODULE_DESCRIPTION("This is a very important kernel module");
 #define BUF_SIZE 257
 struct Ring_Buffer{
     char data[BUF_SIZE];// данные
-    char *cur_pos;//конечная позиция
-    char *end;
+    size_t cur_ind;//текущий индекс
 }Ring_Buffer;
 
 static int session_counter = 0;
 
 struct Ring_Buffer *create_ring_buffer(void);
-
-int size_counting(struct Ring_Buffer *buffer, const size_t *expected_size, size_t *available_size);
 // сколько записал столько и верну
 size_t write_data(struct Ring_Buffer *buffer, const __user char* userbuf, size_t size) ;
 //
 size_t read_data(struct Ring_Buffer *buffer, __user char* userbuf, size_t size) ;
 
-int pos_move(struct Ring_Buffer *buffer, loff_t offset, int whence);
+size_t pos_move(struct Ring_Buffer *buffer, loff_t offset, int whence);
 //
 int delete_buffer(struct Ring_Buffer *buffer);
 
@@ -110,29 +107,10 @@ static loff_t mydev_llseek(struct file *pfile, loff_t offset, int origin){
     loff_t testpos;
     struct Ring_Buffer *buffer = NULL;
     buffer = (struct Ring_Buffer*)pfile -> private_data;
-    switch (origin){
-        case SEEK_SET:
-            testpos = offset;
-            break;
-        case SEEK_CUR:
-            testpos = pfile->f_pos + offset;
-            break;
-        case SEEK_END:
-            testpos = KBUF_SIZE + offset;
-            break;
-        default:
-            return -EINVAL;
-    }
-    if (testpos > KBUF_SIZE)
-        testpos = KBUF_SIZE;
-    else if (testpos < KBUF_SIZE)
-        testpos = 0;
-    pfile->f_pos = testpos;
     if(!buffer)
         printk( KERN_ERR "mydev_llseek buffer==NULL %s\n", DEVICE_NAME);
     else
-        pos_move(buffer, offset, origin);
-    return testpos;
+        return pos_move(buffer, offset, origin);
 }
 
 struct file_operations fops = {
@@ -178,82 +156,99 @@ struct Ring_Buffer *create_ring_buffer(void) {
     if (buffer_ptr == NULL) {
         return NULL;
     }
-    buffer_ptr -> cur_pos = buffer_ptr->data;
-    written = sprintf(buffer_ptr -> cur_pos, "%d", session_counter);
-    buffer_ptr -> cur_pos += written;
-    *(buffer_ptr -> cur_pos) = '\0';
-    buffer_ptr -> end = buffer_ptr -> data + BUF_SIZE - 1;
-    *(buffer_ptr -> end) = '\0';
+    written = sprintf(buffer_ptr -> data, "%d", session_counter);
+    buffer_ptr -> cur_ind = written;
+    buffer_ptr -> data[buffer_ptr -> cur_ind] = '\0';
     return buffer_ptr;
-}
-
-int size_counting(struct Ring_Buffer *buffer, const size_t *expected_size, size_t *available_size)
-{
-    size_t max_available_size = buffer->end - buffer->cur_pos;
-    if (max_available_size < 0)
-        return -1;
-    if (*expected_size > max_available_size)
-        *available_size = max_available_size;
-    else
-        *available_size = *expected_size;
-    return 0;
 }
 // сколько записал столько и верну
 size_t write_data(struct Ring_Buffer *buffer, const __user char* userbuf, size_t size) {
-    size_t size_to_write = 0;
-    int check_border = 0;
     int nbytes = 0;
+    size_t av_size = 0;
+    size_t size_to_write = size;
     if (buffer == NULL) {
+        printk( KERN_ERR "write_data BUFFER=NULL\n" );
         return 0;
     }
-    check_border = size_counting(buffer, &size, &size_to_write);
-    if(check_border != 0)
-        return 0;
-    nbytes = size_to_write - copy_from_user(buffer->cur_pos, userbuf, size_to_write);
-    buffer->cur_pos += nbytes;
-    *(buffer->cur_pos) = '\0';
+    av_size = BUF_SIZE - buffer->cur_ind;
+    if(size > av_size) {
+        size_to_write = av_size;
+    }
+    nbytes = size_to_write - copy_from_user(&buffer->data[buffer->cur_ind], userbuf, size_to_write);
+    buffer->cur_ind += nbytes;
+    buffer->data[buffer->cur_ind] = '\0';
     printk( KERN_ALERT "write_data BUFFER=%s\n", buffer->data);
     return nbytes;
 }
 //
 size_t read_data(struct Ring_Buffer *buffer, __user char* userbuf, size_t size) {
-    size_t size_to_read = 0;
-    int check_border = 0;
-    size_t nbytes = 0;
+    size_t av_size = 0;
+    int nbytes = 0;
+    size_t size_to_read = size;
     if (buffer == NULL) {
-        return nbytes;
-    }
-    check_border = size_counting(buffer, &size, &size_to_read);
-    if(check_border != 0)
+        printk( KERN_ERR "read_data BUFFER=NULL\n" );
         return 0;
+    }
+    av_size = BUF_SIZE - buffer->cur_ind;
+    if(size > av_size) {
+        size_to_read = av_size;
+    }
     printk( KERN_ALERT "read_data BUFFER=%s\n", buffer->data);
-    copy_to_user(userbuf, buffer->data, size_to_read);
-    nbytes = buffer->cur_pos - buffer->data;
-    printk( KERN_ALERT "read_data nbytes=%ld\n", nbytes);
+    nbytes = size_to_read - copy_to_user(userbuf, buffer->data, size_to_read);
+    printk( KERN_ALERT "read_data size_to_read=%ld\n", size_to_read);
     return nbytes;
 }
 // %ld\n
-int pos_move(struct Ring_Buffer *buffer, loff_t offset, int whence)
+size_t pos_move(struct Ring_Buffer *buffer, loff_t offset, int whence)
 {
+    size_t size_to_end = BUF_SIZE - buffer->cur_ind;
+    size_t size_to_begin = BUF_SIZE - size_to_end;
+
     switch (whence) {
         case SEEK_SET:
-            buffer->cur_pos = buffer->data + offset;
+        {
+            if(offset < 0){
+                buffer->cur_ind = 0;
+                break;
+            }
+            if(offset >= BUF_SIZE)
+                buffer->cur_ind = BUF_SIZE - 1;
+            else
+                buffer->cur_ind = offset;
             break;
+        }
         case SEEK_CUR:
-            buffer->cur_pos += offset;
+        {
+            if(offset < 0 && offset * -1 > size_to_begin){
+                buffer->cur_ind = 0;
+                break;
+            }
+            if(offset > 0 && offset > size_to_end){
+                buffer->cur_ind = BUF_SIZE - 1;
+                break;
+            }
+            buffer->cur_ind+=offset;
             break;
+        }
         case SEEK_END:
-            buffer->cur_pos = buffer->end + offset;
+        {
+            if(offset > 0){
+                printk( KERN_ALERT
+                        "POSITIVE OFFSET WITH SEEK_END  offset=%ld\n", offset);
+                break;
+            }
+            if(offset * -1 > size_to_begin){
+                buffer->cur_ind = 0;
+                break;
+            }
+            buffer->cur_ind += offset;
             break;
+        }
         default:
             return -EINVAL;
     }
-    if(buffer->cur_pos >= buffer->end)
-        buffer->cur_pos = buffer->end - 1;
-    if(buffer->cur_pos < buffer->data)
-        buffer->cur_pos = buffer->data;
-    *(buffer->cur_pos + 1) = '\0';
-    return 0;
+    buffer->cur_ind = '\0';
+    return buffer->cur_ind;
 }
 
 //
