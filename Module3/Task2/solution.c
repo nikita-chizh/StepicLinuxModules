@@ -35,6 +35,7 @@ struct Ring_Buffer{
 }Ring_Buffer;
 
 static int session_counter = 0;
+static const char ending = '\n';
 
 struct Ring_Buffer *create_ring_buffer(void);
 // сколько записал столько и верну
@@ -104,7 +105,6 @@ static ssize_t mydev_write(struct file *pfile, const char __user *buf, size_t wr
 }
 
 static loff_t mydev_llseek(struct file *pfile, loff_t offset, int origin){
-    loff_t testpos;
     struct Ring_Buffer *buffer = NULL;
     buffer = (struct Ring_Buffer*)pfile -> private_data;
     if(!buffer)
@@ -158,7 +158,7 @@ struct Ring_Buffer *create_ring_buffer(void) {
     }
     written = sprintf(buffer_ptr -> data, "%d", session_counter);
     buffer_ptr -> cur_ind = written;
-    buffer_ptr -> data[buffer_ptr -> cur_ind] = '\0';
+    buffer_ptr -> data[buffer_ptr -> cur_ind] = ending;
     return buffer_ptr;
 }
 // сколько записал столько и верну
@@ -176,23 +176,19 @@ size_t write_data(struct Ring_Buffer *buffer, const __user char* userbuf, size_t
     }
     nbytes = size_to_write - copy_from_user(&buffer->data[buffer->cur_ind], userbuf, size_to_write);
     buffer->cur_ind += nbytes;
-    buffer->data[buffer->cur_ind] = '\0';
+    buffer->data[buffer->cur_ind] = ending;
     printk( KERN_ALERT "write_data BUFFER=%s\n", buffer->data);
     return nbytes;
 }
 //
 size_t read_data(struct Ring_Buffer *buffer, __user char* userbuf, size_t size) {
-    size_t av_size = 0;
     int nbytes = 0;
-    size_t size_to_read = size;
+    size_t size_to_read = 0;
     if (buffer == NULL) {
         printk( KERN_ERR "read_data BUFFER=NULL\n" );
         return 0;
     }
-    av_size = BUF_SIZE - buffer->cur_ind;
-    if(size > av_size) {
-        size_to_read = av_size;
-    }
+    size_to_read = buffer->cur_ind + 1; // чтобы с 0-терминатором
     printk( KERN_ALERT "read_data BUFFER=%s\n", buffer->data);
     nbytes = size_to_read - copy_to_user(userbuf, buffer->data, size_to_read);
     printk( KERN_ALERT "read_data size_to_read=%ld\n", size_to_read);
@@ -233,8 +229,7 @@ size_t pos_move(struct Ring_Buffer *buffer, loff_t offset, int whence)
         case SEEK_END:
         {
             if(offset > 0){
-                printk( KERN_ALERT
-                        "POSITIVE OFFSET WITH SEEK_END  offset=%ld\n", offset);
+                printk( KERN_ALERT "POSITIVE OFFSET WITH SEEK_END");
                 break;
             }
             if(offset * -1 > size_to_begin){
@@ -247,7 +242,7 @@ size_t pos_move(struct Ring_Buffer *buffer, loff_t offset, int whence)
         default:
             return -EINVAL;
     }
-    buffer->cur_ind = '\0';
+    buffer->cur_ind = ending;
     return buffer->cur_ind;
 }
 
