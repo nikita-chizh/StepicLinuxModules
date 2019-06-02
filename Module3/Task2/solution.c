@@ -11,6 +11,7 @@
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/module.h>
+#include <linux/device.h>
 
 
 // Шаблон драйвера символьного устройства
@@ -40,11 +41,11 @@ struct Ring_Buffer *create_ring_buffer(void);
 
 int size_counting(struct Ring_Buffer *buffer, const size_t *expected_size, size_t *available_size);
 // сколько записал столько и верну
-size_t write_data(struct Ring_Buffer *buffer, __user char* data, size_t size) ;
+size_t write_data(struct Ring_Buffer *buffer, const __user char* userbuf, size_t size) ;
 //
-size_t read_data(struct Ring_Buffer *buffer, __user char* data, size_t size) ;
+size_t read_data(struct Ring_Buffer *buffer, __user char* userbuf, size_t size) ;
 
-void pos_move(struct Ring_Buffer *buffer, loff_t offset, int whence);
+int pos_move(struct Ring_Buffer *buffer, loff_t offset, int whence);
 //
 int delete_buffer(struct Ring_Buffer *buffer);
 
@@ -73,8 +74,9 @@ static int mydev_open(struct inode *inode, struct file *filp){
 }
 
 static int mydev_release(struct inode *pinode, struct file *pfile){
+    struct Ring_Buffer *buffer = NULL;
+    buffer = (struct Ring_Buffer*)pfile -> private_data;
     printk( KERN_INFO "mydev_release %s\n", DEVICE_NAME);
-    struct Ring_Buffer *buffer = (struct Ring_Buffer*)pfile -> private_data;
     if(buffer)
         delete_buffer(buffer);
     pfile -> private_data = NULL;
@@ -82,19 +84,23 @@ static int mydev_release(struct inode *pinode, struct file *pfile){
 }
 //
 static ssize_t mydev_read(struct file *pfile, char __user *buf, size_t read_size, loff_t *fpos){
-    struct Ring_Buffer *buffer = (struct Ring_Buffer*)pfile -> private_data;
+    struct Ring_Buffer *buffer = NULL;
+    size_t nbytes = 0;
+    buffer = (struct Ring_Buffer*)pfile -> private_data;
     if(!buffer)
-        return 0;
-    size_t nbytes = read_data(buffer, buf, read_size);
+        return nbytes;
+    nbytes = read_data(buffer, buf, read_size);
     // fpos += nbytes;
     return nbytes;
 }
 
 static ssize_t mydev_write(struct file *pfile, const char __user *buf, size_t write_size, loff_t *fpos){
-    struct Ring_Buffer *buffer = (struct Ring_Buffer*)pfile -> private_data;
+    struct Ring_Buffer *buffer = NULL;
+    size_t nbytes = 0;
+    buffer = (struct Ring_Buffer*)(pfile -> private_data);
     if(!buffer)
         return 0;
-    size_t nbytes = write_data(buffer, buf, write_size);
+    nbytes = write_data(buffer, buf, write_size);
     fpos += nbytes;
     return nbytes;
 
@@ -102,6 +108,8 @@ static ssize_t mydev_write(struct file *pfile, const char __user *buf, size_t wr
 
 static loff_t mydev_llseek(struct file *pfile, loff_t offset, int origin){
     loff_t testpos;
+    struct Ring_Buffer *buffer = NULL;
+    buffer = (struct Ring_Buffer*)pfile -> private_data;
     switch (origin){
         case SEEK_SET:
             testpos = offset;
@@ -120,7 +128,6 @@ static loff_t mydev_llseek(struct file *pfile, loff_t offset, int origin){
     else if (testpos < KBUF_SIZE)
         testpos = 0;
     pfile->f_pos = testpos;
-    struct Ring_Buffer *buffer = (struct Ring_Buffer*)pfile -> private_data;
     if(!buffer)
         printk( KERN_ERR "mydev_llseek buffer==NULL %s\n", DEVICE_NAME);
     else
@@ -167,11 +174,12 @@ module_exit(hello_exit) ;
 struct Ring_Buffer *create_ring_buffer(void) {
     struct Ring_Buffer *buffer_ptr = (struct Ring_Buffer*)kmalloc(
             sizeof(struct Ring_Buffer), GFP_ATOMIC);
+    int written = 0;
     if (buffer_ptr == NULL) {
         return NULL;
     }
     buffer_ptr -> cur_pos = buffer_ptr->data;
-    int written = sprintf(buffer_ptr -> cur_pos, "%d", session_counter);
+    written = sprintf(buffer_ptr -> cur_pos, "%d", session_counter);
     buffer_ptr -> cur_pos += written;
     *(buffer_ptr -> cur_pos) = '\0';
     buffer_ptr -> end = buffer_ptr -> data + BUF_SIZE - 1;
@@ -191,37 +199,41 @@ int size_counting(struct Ring_Buffer *buffer, const size_t *expected_size, size_
     return 0;
 }
 // сколько записал столько и верну
-size_t write_data(struct Ring_Buffer *buffer, __user char* userbuf, size_t size) {
+size_t write_data(struct Ring_Buffer *buffer, const __user char* userbuf, size_t size) {
+    size_t size_to_write = 0;
+    int check_border = 0;
+    int nbytes = 0;
     if (buffer == NULL) {
         return 0;
     }
-    size_t size_to_write = 0;
-    int check_border = size_counting(buffer, &size, &size_to_write);
+    check_border = size_counting(buffer, &size, &size_to_write);
     if(check_border != 0)
         return 0;
-    int nbytes = size_to_write - copy_from_user(buffer->cur_pos, userbuf, size_to_write);
+    nbytes = size_to_write - copy_from_user(buffer->cur_pos, userbuf, size_to_write);
     buffer->cur_pos += nbytes;
     *(buffer->cur_pos) = '\0';
     printk( KERN_ALERT "write_data BUFFER=%s\n", buffer->data);
     return nbytes;
 }
 //
-size_t read_data(struct Ring_Buffer *buffer, __user char* data, size_t size) {
-    if (buffer == NULL) {
-        return 0;
-    }
+size_t read_data(struct Ring_Buffer *buffer, __user char* userbuf, size_t size) {
     size_t size_to_read = 0;
-    int check_border = size_counting(buffer, &size, &size_to_read);
+    int check_border = 0;
+    size_t nbytes = 0;
+    if (buffer == NULL) {
+        return nbytes;
+    }
+    check_border = size_counting(buffer, &size, &size_to_read);
     if(check_border != 0)
         return 0;
     printk( KERN_ALERT "read_data BUFFER=%s\n", buffer->data);
-    copy_to_user(data, buffer->data, size_to_read);
-    size_t nbytes = buffer->cur_pos - buffer->data;
-    printk( KERN_ALERT "read_data nbytes=%d\n", nbytes);
+    copy_to_user(userbuf, buffer->data, size_to_read);
+    nbytes = buffer->cur_pos - buffer->data;
+    printk( KERN_ALERT "read_data nbytes=%ld\n", nbytes);
     return nbytes;
 }
-
-void pos_move(struct Ring_Buffer *buffer, loff_t offset, int whence)
+// %ld\n
+int pos_move(struct Ring_Buffer *buffer, loff_t offset, int whence)
 {
     switch (whence) {
         case SEEK_SET:
@@ -241,6 +253,7 @@ void pos_move(struct Ring_Buffer *buffer, loff_t offset, int whence)
     if(buffer->cur_pos < buffer->data)
         buffer->cur_pos = buffer->data;
     *(buffer->cur_pos + 1) = '\0';
+    return 0;
 }
 
 //
@@ -250,4 +263,5 @@ int delete_buffer(struct Ring_Buffer *buffer) {
     }
     kfree(buffer);
     buffer = NULL;
+    return 0;
 }
