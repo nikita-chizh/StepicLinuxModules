@@ -22,7 +22,6 @@ MODULE_DESCRIPTION("This is a very important kernel module");
 // sudo mknod /dev/solution_node c 240 0
 // sudo chmod a+rw /dev/solution_node
 // ls -la /dev/solution_node
-// sudo chmod a+rw /dev/solution_node
 // sudo echo "hi" > /dev/chrdrv
 
 //
@@ -31,11 +30,11 @@ MODULE_DESCRIPTION("This is a very important kernel module");
 #define BUF_SIZE 257
 struct Ring_Buffer{
     char data[BUF_SIZE];// данные
-    size_t cur_ind;//текущий индекс
+    size_t cur_ind;//текущий индекс, суть конец файла
 }Ring_Buffer;
 
 static int session_counter = 0;
-static const char ending = '\n';
+static const char ending = '\0';
 
 struct Ring_Buffer *create_ring_buffer(void);
 // сколько записал столько и верну
@@ -83,13 +82,10 @@ static int mydev_release(struct inode *pinode, struct file *pfile){
 //
 static ssize_t mydev_read(struct file *pfile, char __user *buf, size_t read_size, loff_t *fpos){
     struct Ring_Buffer *buffer = NULL;
-    size_t nbytes = 0;
     buffer = (struct Ring_Buffer*)pfile -> private_data;
     if(!buffer)
-        return nbytes;
-    nbytes = read_data(buffer, buf, read_size);
-    // fpos += nbytes;
-    return nbytes;
+        return 0;
+    return read_data(buffer, buf, read_size);
 }
 
 static ssize_t mydev_write(struct file *pfile, const char __user *buf, size_t write_size, loff_t *fpos){
@@ -98,9 +94,7 @@ static ssize_t mydev_write(struct file *pfile, const char __user *buf, size_t wr
     buffer = (struct Ring_Buffer*)(pfile -> private_data);
     if(!buffer)
         return 0;
-    nbytes = write_data(buffer, buf, write_size);
-    fpos += nbytes;
-    return nbytes;
+    return write_data(buffer, buf, write_size);;
 
 }
 
@@ -108,7 +102,10 @@ static loff_t mydev_llseek(struct file *pfile, loff_t offset, int origin){
     struct Ring_Buffer *buffer = NULL;
     buffer = (struct Ring_Buffer*)pfile -> private_data;
     if(!buffer)
+    {
         printk( KERN_ERR "mydev_llseek buffer==NULL %s\n", DEVICE_NAME);
+        return 0;
+    }
     else
         return pos_move(buffer, offset, origin);
 }
@@ -149,6 +146,9 @@ static void __exit hello_exit(void) {
 module_init(hello_init) ;
 module_exit(hello_exit) ;
 
+
+
+
 struct Ring_Buffer *create_ring_buffer(void) {
     struct Ring_Buffer *buffer_ptr = (struct Ring_Buffer*)kmalloc(
             sizeof(struct Ring_Buffer), GFP_ATOMIC);
@@ -158,7 +158,6 @@ struct Ring_Buffer *create_ring_buffer(void) {
     }
     written = sprintf(buffer_ptr -> data, "%d", session_counter);
     buffer_ptr -> cur_ind = written;
-    buffer_ptr -> data[buffer_ptr -> cur_ind] = ending;
     return buffer_ptr;
 }
 // сколько записал столько и верну
@@ -176,22 +175,26 @@ size_t write_data(struct Ring_Buffer *buffer, const __user char* userbuf, size_t
     }
     nbytes = size_to_write - copy_from_user(&buffer->data[buffer->cur_ind], userbuf, size_to_write);
     buffer->cur_ind += nbytes;
-    buffer->data[buffer->cur_ind] = ending;
     printk( KERN_ALERT "write_data BUFFER=%s\n", buffer->data);
     return nbytes;
 }
 //
 size_t read_data(struct Ring_Buffer *buffer, __user char* userbuf, size_t size) {
     int nbytes = 0;
-    size_t size_to_read = 0;
+    size_t size_to_read = size;
+    printk( KERN_ALERT "read_data0 size_to_read=%lld\n", size_to_read);
+
     if (buffer == NULL) {
         printk( KERN_ERR "read_data BUFFER=NULL\n" );
         return 0;
     }
-    size_to_read = buffer->cur_ind + 1; // чтобы с 0-терминатором
+    if(size_to_read >  buffer->cur_ind)
+        size_to_read = buffer->cur_ind;
+    printk( KERN_ALERT "read_data1 size_to_read=%ld\n", size_to_read);
     printk( KERN_ALERT "read_data BUFFER=%s\n", buffer->data);
     nbytes = size_to_read - copy_to_user(userbuf, buffer->data, size_to_read);
-    printk( KERN_ALERT "read_data size_to_read=%ld\n", size_to_read);
+    buffer->cur_ind -= nbytes;
+    printk( KERN_ALERT "read_data nbytes=%lld\n", nbytes);
     return nbytes;
 }
 // %ld\n
@@ -223,7 +226,7 @@ size_t pos_move(struct Ring_Buffer *buffer, loff_t offset, int whence)
                 buffer->cur_ind = BUF_SIZE - 1;
                 break;
             }
-            buffer->cur_ind+=offset;
+            buffer->cur_ind += offset;
             break;
         }
         case SEEK_END:
@@ -242,7 +245,6 @@ size_t pos_move(struct Ring_Buffer *buffer, loff_t offset, int whence)
         default:
             return -EINVAL;
     }
-    buffer->cur_ind = ending;
     return buffer->cur_ind;
 }
 

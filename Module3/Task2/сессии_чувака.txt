@@ -1,0 +1,143 @@
+#####################Session 0#####################
+Session 0 seek(-1,2): [0]
+Session 0 Writing 'Rs': Rs[]
+Session 0 seek(0,2): Rs[]
+Session 0 Writing 'tQY': RstQY[]
+Session 0 seek(1,0): R[s]tQY
+Session 0 Reading... RstQY[]
+Session 0 seek(2,0): Rs[t]QY
+Session 0 Writing 'gGUAh': RsgGUAh[]
+Session 0 seek(-2,2): RsgGU[A]h
+Session 0 Writing 'vRf': RsgGUvRf[]
+Session 0 seek(-2,2): RsgGUv[R]f
+Session 0 Writing 'J': RsgGUvJ[f]
+Session 0 seek(-7,2): R[s]gGUvJf
+Session 0 Reading... RsgGUvJf[]
+Session 0 seek(-2,2): RsgGUv[J]f
+Session 0 Writing 'W': RsgGUvW[f]
+Session 0 seek(8,0): RsgGUvWf[]
+Session 0 Writing 'QuvpELnbz': RsgGUvWfQuvpELnbz[]
+Session 0 seek(8,0): RsgGUvWf[Q]uvpELnbz
+Session 0 Reading... RsgGUvWfQuvpELnbz[]
+Session 0 seek(-9,2): RsgGUvWf[Q]uvpELnbz
+Session 0 Writing 'uTysr': RsgGUvWfuTysr[L]nbz
+Session 0 seek(12,0): RsgGUvWfuTys[r]Lnbz
+Session 0 Writing 'nq': RsgGUvWfuTysnq[n]bz
+
+#####################Session 1#####################
+Session 1 seek(0,0): [1]
+Session 1 Reading... 1[]
+Session 1 seek(-1,2): [1]
+Session 1 Reading... 1[]
+Session 1 seek(0,2): 1[]
+Session 1 Writing 'WgdYKmhs': 1WgdYKmhs[]
+Session 1 seek(1,0): 1[W]gdYKmhs
+Session 1 Reading... 1WgdYKmhs[]
+Session 1 seek(3,0): 1Wg[d]YKmhs
+Session 1 Reading... 1WgdYKmhs[]
+
+#####################Session 2#####################
+Session 2 seek(0,0): [2]
+Session 2 Writing 'iJfFh': iJfFh[]
+Session 2 seek(4,0): iJfF[h]
+Session 2 Writing 'yDIiBTVEu': iJfFyDIiBTVEu[]
+Session 2 seek(-5,2): iJfFyDIi[B]TVEu
+Session 2 Writing 'HTZlxeIF': iJfFyDIiHTZlxeIF[]
+Session 2 seek(15,0): iJfFyDIiHTZlxeI[F]
+Session 2 Writing 'MOdvq': iJfFyDIiHTZlxeIMOdvq[]
+Session 2 seek(-14,2): iJfFyD[I]iHTZlxeIMOdvq
+Session 2 Reading... iJfFyDIiHTZlxeIMOdvq[]
+
+#####################Session 3#####################
+Session 3 seek(-1,2): [3]
+Session 3 Writing 'uUk': uUk[]
+Session 3 seek(0,0): [u]Uk
+Session 3 Writing 'JgvmHx': JgvmHx[]
+Session 3 seek(-3,2): Jgv[m]Hx
+Session 3 Reading... JgvmHx[]
+Session 3 seek(-2,2): Jgvm[H]x
+Session 3 Reading... JgvmHx[]
+Session 3 seek(0,0): [J]gvmHx
+Session 3 Writing 'IPNzTjkC': IPNzTjkC[]
+Session 3 seek(1,0): I[P]NzTjkC
+Session 3 Reading... IPNzTjkC[]
+
+#####################Session 4#####################
+Session 4 seek(0,2): 4[]
+Session 4 Reading... 4[]
+Session 4 seek(0,2): 4[]
+Session 4 Writing 'Nysti': 4Nysti[]
+Session 4 seek(-4,2): 4N[y]sti
+Session 4 Reading... 4Nysti[]
+Session 4 seek(-2,2): 4Nys[t]i
+Session 4 Writing 'Oemr': 4NysOemr[]
+Session 4 seek(-4,2): 4Nys[O]emr
+Session 4 Writing 'xBU': 4NysxBU[r]
+Session 4 seek(0,0): [4]NysxBUr
+Session 4 Reading... 4NysxBUr[]
+Session 4 seek(4,0): 4Nys[x]BUr
+Session 4 Reading... 4NysxBUr[]
+Session 4 seek(6,0): 4NysxB[U]r
+Session 4 Writing 'OUHP': 4NysxBOUHP[]
+Session 4 seek(-6,2): 4Nys[x]BOUHP
+Session 4 Writing 'SUClzgRT': 4NysSUClzgRT[]
+Session 4 seek(0,2): 4NysSUClzgRT[]
+Session 4 Reading... 4NysSUClzgRT[]
+
+#####################Session 5#####################
+Session 5 seek(0,2): 5[]
+Session 5 Reading... 5[]
+Session 5 seek(0,0): [5]
+Session 5 Writing 'FHUBN': FHUBN[]
+Session 5 seek(-5,2): [F]HUBN
+Session 5 Writing 'dusqDOV': dusqDOV[]
+Session 5 seek(2,0): du[s]qDOV
+Session 5 Reading... dusqDOV[]
+Session 5 seek(-5,2): du[s]qDOV
+Session 5 Writing 'mJ': dumJ[D]OV
+Session 5 seek(2,0): du[m]JDOV
+Session 5 Writing 'KZ': duKZ[D]OV
+
+#####################Session 6#####################
+Session 6 seek(-1,2): [6]
+Session 6 Writing 'rVwXgMSvR': rVwXgMSvR[]
+Session 6 seek(3,0): rVw[X]gMSvR
+Session 6 Writing 'DEF': rVwDEF[S]vR
+Session 6 seek(0,0): [r]VwDEFSvR
+Session 6 Writing 'xWT': xWT[D]EFSvR
+Session 6 seek(-8,2): x[W]TDEFSvR
+Session 6 Writing 'wghk': xwghk[F]SvR
+Session 6 seek(9,0): xwghkFSvR[]
+Session 6 Reading... xwghkFSvR[]
+Session 6 seek(-2,2): xwghkFS[v]R
+Session 6 Writing 'FGpa': xwghkFSFGpa[]
+Session 6 seek(7,0): xwghkFS[F]Gpa
+Session 6 Writing 'FVoehi': xwghkFSFVoehi[]
+Session 6 seek(9,0): xwghkFSFV[o]ehi
+Session 6 Reading... xwghkFSFVoehi[]
+Session 6 seek(-2,2): xwghkFSFVoe[h]i
+Session 6 Writing 'SR': xwghkFSFVoeSR[]
+Session 6 seek(-12,2): x[w]ghkFSFVoeSR
+Session 6 Writing 'qW': xqW[h]kFSFVoeSR
+Session 6 seek(-10,2): xqW[h]kFSFVoeSR
+Session 6 Reading... xqWhkFSFVoeSR[]
+
+#####################Session 7#####################
+Session 7 seek(1,0): 7[]
+Session 7 Reading... 7[]
+Session 7 seek(1,0): 7[]
+Session 7 Writing 'tQcKDmwz': 7tQcKDmwz[]
+Session 7 seek(-6,2): 7tQ[c]KDmwz
+Session 7 Writing 'igbYxQ': 7tQigbYxQ[]
+Session 7 seek(1,0): 7[t]QigbYxQ
+Session 7 Reading... 7tQigbYxQ[]
+Session 7 seek(-1,2): 7tQigbYx[Q]
+Session 7 Writing 'ytvRDW': 7tQigbYxytvRDW[]
+Session 7 seek(3,0): 7tQ[i]gbYxytvRDW
+Session 7 Writing 'kPxepfgM': 7tQkPxepfgM[R]DW
+Session 7 seek(-10,2): 7tQk[P]xepfgMRDW
+Session 7 Reading... 7tQkPxepfgMRDW[]
+Session 7 seek(2,0): 7t[Q]kPxepfgMRDW
+Session 7 Reading... 7tQkPxepfgMRDW[]
+Session 7 seek(-7,2): 7tQkPxe[p]fgMRDW
+Session 7 Writing 'p': 7tQkPxep[f]gMRDW
