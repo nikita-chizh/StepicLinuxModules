@@ -1,3 +1,13 @@
+/*
+Разработать модуль ядра solution, который принимает на вход следующие параметры:
+
+a типа int
+b типа int
+c массив из 5ти элементов типа int
+Модуль считает сумму a+b+c[@], создает kobject с именем /sys/kernel/my_kobject/my_sys и выводит в него результат вычисления.
+*/
+
+
 #include <linux/kobject.h>
 #include <linux/string.h>
 #include <linux/sysfs.h>
